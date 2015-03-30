@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ASAT_History_Analyzer
 {
@@ -43,7 +40,7 @@ namespace ASAT_History_Analyzer
             {
                 var lines = File.ReadAllLines(dbPath);
                 var dbBase64Text = Convert.FromBase64String(lines[1]);
-                folderPath = Encoding.UTF8.GetString(dbBase64Text) + @"\TU Delft\Master 2e jaar\Configuration Analyzer\IO\History\";
+                folderPath = Encoding.UTF8.GetString(dbBase64Text) + @"\TU Delft\Master 2e jaar\Configuration Analyzer\IO\";
             }
 
             return folderPath;

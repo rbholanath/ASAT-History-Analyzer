@@ -7,9 +7,9 @@ namespace ASAT_History_Analyzer
     {
         static void Main(string[] args)
         {
-            var directory = Utilities.GetDropboxPath();
+            var directory = Utilities.GetDropboxPath() + @"History\";
 
-            if (directory != null && Directory.Exists(directory))
+            if (Directory.Exists(directory))
             {
                 var files = Directory.GetFiles(directory, "*.txt", SearchOption.AllDirectories);
 
