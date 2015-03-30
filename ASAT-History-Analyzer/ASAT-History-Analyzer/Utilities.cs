@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -44,6 +45,17 @@ namespace ASAT_History_Analyzer
             }
 
             return folderPath;
+        }
+
+        public static void WriteDictionary<T>(Dictionary<T, int> dictionary, string filePath)
+        {
+            using (var source = File.CreateText(filePath))
+            {
+                foreach (var entry in dictionary)
+                {
+                    source.WriteLine(entry.Key + "," + entry.Value);
+                }
+            }
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Octokit;
 
@@ -9,13 +10,14 @@ namespace ASAT_History_Analyzer
 {
     class CommitRetriever
     {
+        private readonly GitHubClient _client;
         private readonly IRepositoryCommitsClient _repositoryCommitClient;
 
         public CommitRetriever()
         {
-            var client = SetUpClient();
+            _client = SetUpClient();
 
-            _repositoryCommitClient = client.Repository.Commits;
+            _repositoryCommitClient = _client.Repository.Commits;
         }
 
         public void RetrieveCommits(string filePath)
@@ -24,7 +26,7 @@ namespace ASAT_History_Analyzer
 
             var filename = filePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Last();
 
-            var commitAnalyzer = new CommitAnalyzer(Utilities.GetDropboxPath() + @"Out\History\" + filename);
+            var commitAnalyzer = new CommitAnalyzer(Utilities.GetDropboxPath() + @"Out\History\", filename);
 
             using (var streamReader = new StreamReader(filePath))
             {
@@ -34,7 +36,7 @@ namespace ASAT_History_Analyzer
 
                     var commits = GetCommit(_repositoryCommitClient, line).Result;
 
-                    if (commits != null)
+                    if (commits != null && commits.Count > 0)
                     {
                         commitAnalyzer.Analyze(commits, line);
                     }
@@ -89,6 +91,18 @@ namespace ASAT_History_Analyzer
 
                 return null;
             }
+            catch (RateLimitExceededException e)
+            {
+                var remaining = e.Reset;
+
+                Console.WriteLine("Rate Limited: " + e.Limit + ". Reset on: " + e.Reset);
+
+                Thread.Sleep(remaining.Subtract(DateTime.Now));
+            }
+
+            // It should only get here if we were rate limited. In that case, just try again and return. 
+            // This call cannot be in the above catch because it's async.
+            return await GetCommit(repositoryCommitsClient, line);
         }
     }
 }
