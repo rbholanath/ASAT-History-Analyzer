@@ -3,9 +3,9 @@ using System.IO;
 
 namespace ASAT_History_Analyzer
 {
-    class Program
+    static class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             var directory = Utilities.GetDropboxPath() + @"History\";
 

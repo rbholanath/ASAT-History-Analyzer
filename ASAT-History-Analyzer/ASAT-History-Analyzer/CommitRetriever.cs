@@ -10,14 +10,13 @@ namespace ASAT_History_Analyzer
 {
     class CommitRetriever
     {
-        private readonly GitHubClient _client;
         private readonly IRepositoryCommitsClient _repositoryCommitClient;
 
         public CommitRetriever()
         {
-            _client = SetUpClient();
+            var client = SetUpClient();
 
-            _repositoryCommitClient = _client.Repository.Commits;
+            _repositoryCommitClient = client.Repository.Commits;
         }
 
         public void RetrieveCommits(string filePath)
@@ -38,7 +37,9 @@ namespace ASAT_History_Analyzer
 
                     if (commits != null && commits.Count > 0)
                     {
-                        commitAnalyzer.Analyze(commits, line);
+                        var fullCommits = commits.Select(partialCommit => GetFullCommit(partialCommit, line).Result).ToList();
+
+                        commitAnalyzer.Analyze(fullCommits, line);
                     }
                     else
                     {
@@ -103,6 +104,15 @@ namespace ASAT_History_Analyzer
             // It should only get here if we were rate limited. In that case, just try again and return. 
             // This call cannot be in the above catch because it's async.
             return await GetCommit(repositoryCommitsClient, line);
+        }
+
+        async Task<GitHubCommit> GetFullCommit(GitReference partialCommit, string line)
+        {
+            var parts = line.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var user = parts[3];
+            var repo = parts[4];
+
+            return await _repositoryCommitClient.Get(user, repo, partialCommit.Sha).ConfigureAwait(false);
         }
     }
 }
