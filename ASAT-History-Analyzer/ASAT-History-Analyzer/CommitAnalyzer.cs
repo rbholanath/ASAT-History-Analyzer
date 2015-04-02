@@ -115,7 +115,7 @@ namespace ASAT_History_Analyzer
             {
                 int amount;
                 dictionary.TryGetValue(key, out amount);
-                dictionary[key] = + 1;
+                dictionary[key] = amount + 1;
             }
             else
             {
