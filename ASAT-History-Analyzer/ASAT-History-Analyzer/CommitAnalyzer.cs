@@ -8,7 +8,7 @@ namespace ASAT_History_Analyzer
 {
     class CommitAnalyzer
     {
-        private readonly Dictionary<int, int> _timesChanged; 
+        private readonly Dictionary<int, int> _timesChanged;
         private readonly Dictionary<int, int> _relativeDates;
         private readonly Dictionary<string, int> _absoluteDates;
         private readonly Dictionary<string, int> _createdOn;
@@ -19,6 +19,9 @@ namespace ASAT_History_Analyzer
 
         private readonly string _filePath;
         private readonly string _filename;
+
+        private int _filesRead;
+        private int _errors;
 
         private readonly StreamWriter _loggerStreamWriter;
 
@@ -36,6 +39,9 @@ namespace ASAT_History_Analyzer
             _filePath = filePath;
             _filename = filename;
 
+            _filesRead = 0;
+            _errors = 0;
+
             _loggerStreamWriter = File.CreateText(filePath + DateTime.Now.ToString("yyyyMMdd-HHmm") + "_log_" + filename);
         }
 
@@ -47,7 +53,7 @@ namespace ASAT_History_Analyzer
 
             _loggerStreamWriter.WriteLine("\tTimes changed: " + (commits.Count - 1));
 
-            AddOrIncrease(_timesChanged, commits.Count - 1);            
+            AddOrIncrease(_timesChanged, commits.Count - 1);
 
             AddOrIncrease(_createdOn, firstDate.Date.ToString("yyyyMMdd"));
 
@@ -55,6 +61,8 @@ namespace ASAT_History_Analyzer
             {
                 AnalyzeCommit(commit, line, firstDate);
             }
+
+            _filesRead++;
         }
 
         private void AnalyzeCommit(GitHubCommit commit, string line, DateTimeOffset firstDate)
@@ -117,8 +125,10 @@ namespace ASAT_History_Analyzer
 
         public void LogError(string line)
         {
-            _loggerStreamWriter.WriteLine("File: " + line);
+            _loggerStreamWriter.WriteLine("[" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + "] | File: " + line);
             _loggerStreamWriter.WriteLine("\tERROR.");
+
+            _errors++;
         }
 
         public void Close()
@@ -131,6 +141,9 @@ namespace ASAT_History_Analyzer
             Utilities.WriteDictionary(_additions, _filePath + "additions_" + Path.ChangeExtension(_filename, ".csv"));
             Utilities.WriteDictionary(_deletions, _filePath + "deletions_" + Path.ChangeExtension(_filename, ".csv"));
             Utilities.WriteDictionary(_totalChanges, _filePath + "total_changes_" + Path.ChangeExtension(_filename, ".csv"));
+
+            _loggerStreamWriter.WriteLine("Files read: " + _filesRead);
+            _loggerStreamWriter.WriteLine("Errors: " + _errors);
 
             _loggerStreamWriter.Close();
         }

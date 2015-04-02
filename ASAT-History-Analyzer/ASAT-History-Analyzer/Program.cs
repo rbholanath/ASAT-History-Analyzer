@@ -18,6 +18,10 @@ namespace ASAT_History_Analyzer
                 foreach (var file in files)
                 {
                     commitRetriever.RetrieveCommits(file);
+
+                    Console.WriteLine("Read file: " + file);
+                    Console.WriteLine("Press any key to continue.");
+                    Console.ReadKey();
                 }
             }
            

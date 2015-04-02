@@ -37,7 +37,10 @@ namespace ASAT_History_Analyzer
 
                     if (commits != null && commits.Count > 0)
                     {
-                        var fullCommits = commits.Select(partialCommit => GetFullCommit(partialCommit, line).Result).ToList();
+                        // If there is an error retrieving the full commit, just use the partial one.
+                        var fullCommits = (from partialCommit in commits 
+                                           let fullCommit = GetFullCommit(partialCommit, line).Result 
+                                           select fullCommit ?? partialCommit).ToList();
 
                         commitAnalyzer.Analyze(fullCommits, line);
                     }
@@ -86,24 +89,29 @@ namespace ASAT_History_Analyzer
             {
                 return await repositoryCommitsClient.GetAll(user, repo, request).ConfigureAwait(false);
             }
-            catch (NotFoundException)
+            catch (Exception e)
             {
-                Console.WriteLine("File: " + line + " gave an error.");
+                if (e is RateLimitExceededException)
+                {
+                    var ex = (RateLimitExceededException) e;
+                    var remaining = ex.Reset;
 
-                return null;
-            }
-            catch (RateLimitExceededException e)
-            {
-                var remaining = e.Reset;
+                    Console.WriteLine("Rate Limited: " + ex.Limit + ". Reset on: " + ex.Reset);
 
-                Console.WriteLine("Rate Limited: " + e.Limit + ". Reset on: " + e.Reset);
+                    Thread.Sleep(remaining.Subtract(DateTime.Now));
+                }
+                else
+                {
+                    Console.WriteLine("File: " + line + " gave an error.");
+                    Console.WriteLine("\t" + e.Message);
 
-                Thread.Sleep(remaining.Subtract(DateTime.Now));
+                    return null;
+                }
             }
 
             // It should only get here if we were rate limited. In that case, just try again and return. 
             // This call cannot be in the above catch because it's async.
-            return await GetCommit(repositoryCommitsClient, line);
+            return await GetCommit(repositoryCommitsClient, line).ConfigureAwait(false);
         }
 
         async Task<GitHubCommit> GetFullCommit(GitReference partialCommit, string line)
@@ -112,7 +120,33 @@ namespace ASAT_History_Analyzer
             var user = parts[3];
             var repo = parts[4];
 
-            return await _repositoryCommitClient.Get(user, repo, partialCommit.Sha).ConfigureAwait(false);
+            try
+            {
+                return await _repositoryCommitClient.Get(user, repo, partialCommit.Sha).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                if (e is RateLimitExceededException)
+                {
+                    var ex = (RateLimitExceededException) e;
+                    var remaining = ex.Reset;
+
+                    Console.WriteLine("Rate Limited: " + ex.Limit + ". Reset on: " + ex.Reset);
+
+                    Thread.Sleep(remaining.Subtract(DateTime.Now));
+                }
+                else
+                {
+                    Console.WriteLine("File: " + line + " gave an error.");
+                    Console.WriteLine("\t" + e.Message);
+
+                    return null;
+                }
+            }
+
+            // It should only get here if we were rate limited. In that case, just try again and return. 
+            // This call cannot be in the above catch because it's async.
+            return await GetFullCommit(partialCommit, line).ConfigureAwait(false);
         }
     }
 }
