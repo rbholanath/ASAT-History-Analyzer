@@ -78,15 +78,15 @@ namespace ASAT_History_Analyzer
 
         async Task<IReadOnlyList<GitHubCommit>> GetCommit(IRepositoryCommitsClient repositoryCommitsClient, string line)
         {
-            var parts = line.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var user = parts[3];
-            var repo = parts[4];
-            var path = Utilities.CombineStringArray(parts, 6, '/');
-
-            var request = new CommitRequest { Path = path };
-
             try
             {
+                var parts = line.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var user = parts[3];
+                var repo = parts[4];
+                var path = Utilities.CombineStringArray(parts, 6, '/');
+
+                var request = new CommitRequest { Path = path };
+
                 return await repositoryCommitsClient.GetAll(user, repo, request).ConfigureAwait(false);
             }
             catch (Exception e)
@@ -111,17 +111,29 @@ namespace ASAT_History_Analyzer
 
             // It should only get here if we were rate limited. In that case, just try again and return. 
             // This call cannot be in the above catch because it's async.
-            return await GetCommit(repositoryCommitsClient, line).ConfigureAwait(false);
+            // No rate limit check needed, because we were just rate limited.
+            try
+            {
+                return await GetCommit(repositoryCommitsClient, line).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("File: " + line + " gave an error.");
+                Console.WriteLine("\t" + e.Message);
+            }
+
+            // It should never get here.
+            return null;
         }
 
         async Task<GitHubCommit> GetFullCommit(GitReference partialCommit, string line)
         {
-            var parts = line.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-            var user = parts[3];
-            var repo = parts[4];
-
             try
             {
+                var parts = line.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                var user = parts[3];
+                var repo = parts[4];
+
                 return await _repositoryCommitClient.Get(user, repo, partialCommit.Sha).ConfigureAwait(false);
             }
             catch (Exception e)
@@ -146,7 +158,19 @@ namespace ASAT_History_Analyzer
 
             // It should only get here if we were rate limited. In that case, just try again and return. 
             // This call cannot be in the above catch because it's async.
-            return await GetFullCommit(partialCommit, line).ConfigureAwait(false);
+            // No rate limit check needed, because we were just rate limited.
+            try
+            {
+                return await GetFullCommit(partialCommit, line).ConfigureAwait(false);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("File: " + line + " gave an error.");
+                Console.WriteLine("\t" + e.Message);
+            }
+
+            // It should never get here
+            return null;
         }
     }
 }
